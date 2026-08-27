@@ -49,14 +49,14 @@ canvas.addEventListener("mouseup", function (e) {
 })
 
 const colours = [
+    "black",
     "blue",
-    "green"
+    "green",
+    "rgba(0,0,0,.5)"
 ]
 const INPUTLIST = [
-    "w",
-    "a",
-    "s",
-    "d"
+    "w","a","s","d","e",
+    "i","j","k","l","o"
 ]
 function getInput(){
     let input = 0
@@ -67,15 +67,50 @@ function getInput(){
     }
     return input
 }
+function drawFRect(drawData,i){//[type,x,y,w,h,colour]
+    ctx.fillStyle = colours[drawData[i+5]]
+    ctx.fillRect(
+        drawData[i+1],
+        drawData[i+2],
+        drawData[i+3],
+        drawData[i+4]
+    )
+    return i+6
+}
+function drawSRect(drawData,i){//[type,x,y,w,h,colour,thickness]
+    ctx.strokeStyle = colours[drawData[i+5]]
+    ctx.lineWidth = drawData[i+6]
+    ctx.strokeRect(
+        drawData[i+1],
+        drawData[i+2],
+        drawData[i+3],
+        drawData[i+4]
+    )
+    return i+7
+}
+function drawFCircle(drawData,i){//[type,x,y,r,colour]
+    ctx.beginPath()
+    ctx.arc(
+        drawData[i+1],
+        drawData[i+2],
+        drawData[i+3],
+        0,
+        2*Math.PI
+    )
+    ctx.fillStyle = colours[drawData[i+4]]
+    ctx.fill()
+    
+    return i+5
+}
+const drawFuncs = [ //[fillRect;strokeRect;circle]
+    drawFRect,
+    drawSRect,
+    drawFCircle
+]
 function draw(drawData){
-    for (let i=0;i<drawData.length; i += 5){
-        ctx.fillStyle = colours[drawData[i+4]]
-        ctx.fillRect(
-            drawData[i],
-            drawData[i+1],
-            drawData[i+2],
-            drawData[i+3]
-        )
+    let i = 0
+    while (i<drawData.length){
+        i = drawFuncs[drawData[i]](drawData,i)
     }
 }
 let game = new Game(0,canvasWidth/2,canvasHeight/2)
@@ -86,8 +121,8 @@ function animate(timestamp) { //£ animate
     ctx.clearRect(0, 0, canvasWidth, canvasHeight);
 
 
-    const drawData = game.update(delta,getInput())
-    draw(drawData)
+    const drawData = game.update(delta,getInput());
+    draw(drawData);
 
     requestAnimationFrame(animate);
 }
