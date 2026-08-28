@@ -55,8 +55,8 @@ const colours = [
     "rgba(0,0,0,.5)"
 ]
 const INPUTLIST = [
-    "w","a","s","d","e",
-    "i","j","k","l","o"
+    "w","a","s","d","e","q",
+    "i","j","k","l","o","u"
 ]
 function getInput(){
     let input = 0
@@ -113,7 +113,7 @@ function draw(drawData){
         i = drawFuncs[drawData[i]](drawData,i)
     }
 }
-let game = new Game(0,canvasWidth/2,canvasHeight/2)
+let game = new Game()
 
 function animate(timestamp) { //£ animate
     const delta = (timestamp - previousTime) / 1000;
