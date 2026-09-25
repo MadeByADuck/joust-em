@@ -28,102 +28,125 @@ let mouseY = canvasHeight / 2;
 let mouseDown = false;
 
 document.addEventListener("keydown", (event) => {
-    isKeyDown[event.key.toLowerCase()] = true;
+    inputs[0] = true;
+    const index = INPUTLIST.indexOf(event.key.toLowerCase())
+    if (index !== -1){
+        inputs[index] = true;
+    }
 });
 document.addEventListener("keyup", (event) => {
-    isKeyDown[event.key.toLowerCase()] = false;
-})
-function getMousePos(event) {
-    const rect = canvas.getBoundingClientRect();
-    mouseX = (event.clientX - rect.left)/screenScale;
-    mouseY = (event.clientY - rect.top)/screenScale;
-}
-canvas.addEventListener("mousemove", function (e) {
-    getMousePos(e)
-})
-canvas.addEventListener("mousedown", function (e) {
-    mouseDown = true;
-})
-canvas.addEventListener("mouseup", function (e) {
-    mouseDown = false;
+    inputs[0] = false;
+    const index = INPUTLIST.indexOf(event.key.toLowerCase())
+    if (index !== -1){
+        inputs[index] = false;
+    }
 })
 
-const colours = [
+const COLOURS = [ //Consts
     "black",
     "blue",
     "green",
     "rgba(0,0,0,.5)"
 ]
-const INPUTLIST = [
+const INPUTLIST = [ 
+    "all",
     "w","a","s","d","e","q",
     "i","j","k","l","o","u"
 ]
+const TEXTBASES = [
+    "top",
+    "middle",
+    "bottom"
+]
+const TEXTALIGNS = [
+    "left",
+    "center",
+    "right"
+]
+let inputs = Array(INPUTLIST.length).fill(false);
 function getInput(){
-    let input = 0
+    let inputNum = 0
     for (let i=0; i<INPUTLIST.length; i++){
-        if (isKeyDown[INPUTLIST[i]]){
-            input |= 1 << i
+        if (inputs[i]){
+            inputNum |= 1 << i
         }
     }
-    return input
+    return inputNum
 }
-function drawFRect(drawData,i){//[type,x,y,w,h,colour]
-    ctx.fillStyle = colours[drawData[i+5]]
+function drawHud(data){
+    if (data.stage !== 1 && data.stage !== 2 ) return
+    ctx.textBaseline = "bottom";
+    ctx.font = "50px Arial";
+    ctx.fillStyle = "black";
+
+    ctx.textAlign = "center";
+    ctx.fillText(data.round,canvasWidth/2,canvasHeight);
+
+    ctx.textAlign = "left";
+    ctx.fillText(`Score: ${data.p1Score}`,0,canvasHeight);
+
+    ctx.textAlign = "right";
+    ctx.fillText(`Score: ${data.p2Score}`,canvasWidth,canvasHeight);
+
+}
+function drawFRect(rect){
+    ctx.fillStyle = COLOURS[rect.colour];
     ctx.fillRect(
-        drawData[i+1],
-        drawData[i+2],
-        drawData[i+3],
-        drawData[i+4]
+        rect.x,
+        rect.y,
+        rect.w,
+        rect.h
     )
-    return i+6
 }
-function drawSRect(drawData,i){//[type,x,y,w,h,colour,thickness]
-    ctx.strokeStyle = colours[drawData[i+5]]
-    ctx.lineWidth = drawData[i+6]
+function drawSRect(sRect){
+    ctx.strokeStyle = COLOURS[sRect.colour];
+    ctx.lineWidth = sRect.thickness;
     ctx.strokeRect(
-        drawData[i+1],
-        drawData[i+2],
-        drawData[i+3],
-        drawData[i+4]
+        sRect.x,
+        sRect.y,
+        sRect.w,
+        sRect.h
     )
-    return i+7
 }
-function drawFCircle(drawData,i){//[type,x,y,r,colour]
+function drawFCircle(cir){
     ctx.beginPath()
     ctx.arc(
-        drawData[i+1],
-        drawData[i+2],
-        drawData[i+3],
+        cir.x,
+        cir.y,
+        cir.r,
         0,
         2*Math.PI
     )
-    ctx.fillStyle = colours[drawData[i+4]]
+    ctx.fillStyle = COLOURS[cir.colour]
     ctx.fill()
-    
-    return i+5
 }
-const drawFuncs = [ //[fillRect;strokeRect;circle]
-    drawFRect,
-    drawSRect,
-    drawFCircle
-]
+
+function drawText(t){
+    ctx.font = `${t.h}px Arial`;
+    ctx.fillStyle = COLOURS[t.colour];
+
+    ctx.textBaseline = TEXTBASES[t.base]
+    ctx.textAlign = TEXTALIGNS[t.align]
+
+    ctx.fillText(t.text,t.x,t.y);
+}
 function draw(drawData){
-    let i = 0
-    while (i<drawData.length){
-        i = drawFuncs[drawData[i]](drawData,i)
-    }
+    drawData.rects.forEach(i => drawFRect(i));
+    drawData.sRects.forEach(i => drawSRect(i));
+    drawData.circles.forEach(i => drawFCircle(i));
+    drawData.texts.forEach(i => drawText(i))
+
 }
 let game = new Game()
-
 function animate(timestamp) { //£ animate
     const delta = (timestamp - previousTime) / 1000;
     previousTime = timestamp
     ctx.clearRect(0, 0, canvasWidth, canvasHeight);
 
-
     const drawData = game.update(delta,getInput());
     draw(drawData);
 
+    //if (data.stage === 1)drawHud(data)
     requestAnimationFrame(animate);
 }
 requestAnimationFrame(animate);
