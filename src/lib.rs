@@ -1,6 +1,6 @@
 #![allow(non_snake_case)]   
 
-use std::fmt::format;
+
 
 use serde::Serialize;
 use wasm_bindgen::prelude::*;
@@ -31,7 +31,7 @@ const TOPBOUND: Rect = Rect{
 const HORSEW: f64 = 100.0;
 const HORSEACC: f64 = 20.0;
 
-const TEXT_H: i32 = 50;
+
 
 fn getScrR(dist: f64, r: f64) -> f64{
     (-0.048*dist + r).max(0.001)
@@ -274,7 +274,7 @@ impl Game{ //£Game
             player2: Player::new(false),
             stage: Stages::Charge,
             timeLeft: 0.0,
-            round: 0,
+            round: 1,
             score1: 0,
             score2: 0,
             scoreGain1: 0,
@@ -287,9 +287,22 @@ impl Game{ //£Game
 
         let horseDist: f64 = self.player2.horse.x - self.player1.horse.x - HORSEW;
 
+
+
+        drawSRect(drawData, &TOPBOUND, 0, BORDERTHICK);
+        
+        self.player1.draw(drawData);
+        self.player2.draw(drawData);
+        self.player1.drawShadow(drawData,horseDist);
+        self.player2.drawShadow(drawData,horseDist);
+
+        drawText(drawData, self.round.to_string(), CANVAS_W/2.0, CANVAS_H, 50, 0, 2, 1);
+        drawText(drawData, self.score1.to_string(), 0.0, CANVAS_H, 50, 0, 2, 0);
+        drawText(drawData, self.score2.to_string(), CANVAS_W, CANVAS_H, 50, 0, 2, 2);
+        
         if horseDist <= 0.0{ //Start hit
             self.stage = Stages::Hit;
-            self.timeLeft = 5.0;
+            self.timeLeft = 2.0;
             self.round += 1;
 
             let mut flipShield1: Circle = self.player1.shield;
@@ -306,21 +319,22 @@ impl Game{ //£Game
             self.score2 += self.scoreGain2;
 
         }
-
-        drawSRect(drawData, &TOPBOUND, 0, BORDERTHICK);
-        
-        self.player1.draw(drawData);
-        self.player2.draw(drawData);
-        self.player1.drawShadow(drawData,horseDist);
-        self.player2.drawShadow(drawData,horseDist);
-
-        drawText(drawData, self.round.to_string(), CANVAS_W/2.0, CANVAS_H, 50, 0, 2, 1);
-        drawText(drawData, self.score1.to_string(), 0.0, CANVAS_H, 50, 0, 2, 0);
-        drawText(drawData, self.score2.to_string(), CANVAS_W, CANVAS_H, 50, 0, 2, 2);
     }
     fn hit(&mut self,drawData: &mut DrawData, delta: f64){
         self.timeLeft -= delta;
+        if self.timeLeft <= 0.0{
+            if self.round > 3 && self.score1 != self.score2{
+                self.stage = Stages::End
+            }else{
+                self.stage = Stages::Charge;
+                self.player1 = Player::new(true);
+                self.player2 = Player::new(false);
+            }
+            return;
+        }
         
+        const TEXT_H: i32 = 50;
+
         let centerX1 = self.player1.bounds.x + self.player1.bounds.w /2.0;
         drawText(drawData, "Player 1".to_owned(), centerX1, CANVAS_H/2.0-(TEXT_H as f64), TEXT_H, 0, 1, 1);
         drawText(drawData, format!("Score: {}",self.score1), centerX1, CANVAS_H/2.0, TEXT_H, 0, 1, 1);
@@ -333,7 +347,17 @@ impl Game{ //£Game
 
         drawText(drawData, ((self.timeLeft*10.0).round()/10.0).to_string(), CANVAS_W/2.0, CANVAS_H/2.0, 50, 0, 1, 1);
 
+    }
+    fn end(&mut self,drawData: &mut DrawData){
+        const TEXT_H:i32 = 80;
+        drawText(drawData, format!("Player 1: {}",self.score1), CANVAS_W/2.0,CANVAS_H/2.0 -TEXT_H as f64 ,TEXT_H, 0, 1, 1);
+        drawText(drawData, format!("Player 2: {}",self.score2), CANVAS_W/2.0,CANVAS_H/2.0,TEXT_H, 0, 1, 1);
 
+        let wonText = if self.score1 > self.score2{"Player 1 Wins"} 
+        else if self.score2 > self.score1{"Player 2 wins"}
+        else {"Draw"}.to_owned();
+
+        drawText(drawData, wonText, CANVAS_W/2.0,CANVAS_H/2.0 +TEXT_H as f64 ,TEXT_H, 0, 1, 1);
     }
     pub fn update(&mut self,delta: f64,inputNum: i32) -> JsValue{
         let mut inputs = [false;INPUTAMO];
@@ -345,6 +369,7 @@ impl Game{ //£Game
         match self.stage{
             Stages::Charge => self.Charge(&mut drawData ,delta, &inputs),
             Stages::Hit => self.hit(&mut drawData, delta),
+            Stages::End => self.end(&mut drawData),
             _ => self.Charge(&mut drawData,delta, &inputs) 
         };
         to_value(&drawData).unwrap()
