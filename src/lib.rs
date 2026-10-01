@@ -28,7 +28,7 @@ const TOPBOUND: Rect = Rect{
     w: 1230.0,
     h: 100.0
 };
-const HORSEW: f64 = 100.0;
+const HORSEW: f64 = 150.0;
 const HORSEACC: f64 = 20.0;
 
 
@@ -54,7 +54,14 @@ enum Stages{
     End
 }
 
-
+#[derive(Serialize)]
+struct ImgDraw{
+    img: i8,
+    x: f64,
+    y: f64,
+    w: f64,
+    h: f64,
+}
 #[derive(Serialize)]
 struct RectDraw{
     x: f64,
@@ -95,6 +102,7 @@ struct DrawData {
     sRects: Vec<SRectDraw>,
     circles: Vec<CircleDraw>,
     texts: Vec<TextDraw>,
+    imgs: Vec<ImgDraw>
 }
 fn drawFRect(drawData: &mut DrawData,rect: &Rect,colour: u8){
     drawData.rects.push(RectDraw {
@@ -110,6 +118,12 @@ fn drawCircle(drawData: &mut DrawData, circle: &Circle, colour: u8){
 }
 fn drawText(drawData: &mut DrawData,text:String, x:f64, y:f64, h: i32, colour: u8, base: u8, align: u8 ){
     drawData.texts.push(TextDraw { text: text, x, y: y, h: h, colour: colour, base: base, align: align});
+}
+fn drawImgRect(drawData: &mut DrawData,img:i8 , rect: &Rect){
+    drawData.imgs.push(ImgDraw { img, x: rect.x, y: rect.y, w: rect.w, h: rect.h })
+}
+fn drawImgCir(drawData: &mut DrawData, img:i8, cir: &Circle){
+    drawData.imgs.push(ImgDraw { img, x: cir.x - cir.r, y: cir.y - cir.r, w: cir.r *2.0, h: cir.r*2.0 })
 }
 #[derive(Clone, Copy)]
 struct Rect{
@@ -281,7 +295,10 @@ impl Game{ //£Game
             scoreGain2: 0
         }
     }
-    fn Charge(&mut self,drawData: &mut DrawData, delta: f64,inputs: &[bool; INPUTAMO]){
+    fn intro(&mut self,drawData: &mut DrawData, anyInp: bool){
+        drawFRect(drawData, & Rect { x: CANVAS_W/2.0, y: CANVAS_H/2.0, w: 100.0, h: 100.0 }, 1);
+    }
+    fn charge(&mut self,drawData: &mut DrawData, delta: f64,inputs: &[bool; INPUTAMO]){
         self.player1.update(delta,inputs);
         self.player2.update(delta,inputs);
 
@@ -348,7 +365,7 @@ impl Game{ //£Game
         drawText(drawData, ((self.timeLeft*10.0).round()/10.0).to_string(), CANVAS_W/2.0, CANVAS_H/2.0, 50, 0, 1, 1);
 
     }
-    fn end(&mut self,drawData: &mut DrawData){
+    fn end(&mut self,drawData: &mut DrawData,anyInp: bool){
         const TEXT_H:i32 = 80;
         drawText(drawData, format!("Player 1: {}",self.score1), CANVAS_W/2.0,CANVAS_H/2.0 -TEXT_H as f64 ,TEXT_H, 0, 1, 1);
         drawText(drawData, format!("Player 2: {}",self.score2), CANVAS_W/2.0,CANVAS_H/2.0,TEXT_H, 0, 1, 1);
@@ -358,6 +375,15 @@ impl Game{ //£Game
         else {"Draw"}.to_owned();
 
         drawText(drawData, wonText, CANVAS_W/2.0,CANVAS_H/2.0 +TEXT_H as f64 ,TEXT_H, 0, 1, 1);
+
+        if anyInp{
+            self.stage = Stages::Intro;
+            self.score1 = 0;
+            self.score2 = 0;
+            self.round = 1;
+            self.player1 = Player::new(true);
+            self.player2 = Player::new(false);
+        }
     }
     pub fn update(&mut self,delta: f64,inputNum: i32) -> JsValue{
         let mut inputs = [false;INPUTAMO];
@@ -365,12 +391,12 @@ impl Game{ //£Game
             inputs[i] = (inputNum & (1<<i)) != 0
         }
         let mut drawData = DrawData{
-            rects: vec![], sRects:vec![], circles:vec![], texts:vec![]};
+            rects: vec![], sRects:vec![], circles:vec![], texts:vec![], imgs: vec![]};
         match self.stage{
-            Stages::Charge => self.Charge(&mut drawData ,delta, &inputs),
+            Stages::Charge => self.charge(&mut drawData ,delta, &inputs),
             Stages::Hit => self.hit(&mut drawData, delta),
-            Stages::End => self.end(&mut drawData),
-            _ => self.Charge(&mut drawData,delta, &inputs) 
+            Stages::End => self.end(&mut drawData,inputs[0]),
+            _ => self.charge(&mut drawData,delta, &inputs) 
         };
         to_value(&drawData).unwrap()
     }

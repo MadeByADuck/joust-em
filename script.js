@@ -63,6 +63,12 @@ const TEXTALIGNS = [
     "center",
     "right"
 ]
+const ATLAS = new Image()
+//ATLAS.src = ""
+const S_IMGS = [
+    [0,0,50,50], //example
+
+]
 let inputs = Array(INPUTLIST.length).fill(false);
 function getInput(){
     let inputNum = 0
@@ -130,12 +136,19 @@ function drawText(t){
 
     ctx.fillText(t.text,t.x,t.y);
 }
+function drawImg(obj){
+    const sImg = S_IMGS[obj.img]
+    ctx.drawImage(ATLAS,
+        sImg[0], sImg[1], sImg[2], sImg[3],
+        obj.x, obj.y ,obj.w ,obj.h
+    )
+}
 function draw(drawData){
     drawData.rects.forEach(i => drawFRect(i));
     drawData.sRects.forEach(i => drawSRect(i));
     drawData.circles.forEach(i => drawFCircle(i));
     drawData.texts.forEach(i => drawText(i))
-
+    drawData.imgs.forEach(i => drawImg(i))
 }
 let game = new Game()
 function animate(timestamp) { //£ animate
