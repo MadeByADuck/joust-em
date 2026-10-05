@@ -130,6 +130,7 @@ function drawFCircle(arr,i){
     ctx.fill()
     return i+5
 }
+ 
 
 function drawText(arr,i,strings){
     ctx.font = `${arr[i+4]}px Arial`;
