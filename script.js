@@ -64,10 +64,11 @@ const TEXTALIGNS = [
     "right"
 ]
 const ATLAS = new Image()
-//ATLAS.src = ""
+ATLAS.src = "assets/atlas.png"
 const S_IMGS = [
-    [0,0,50,50], //example
-
+    [0,0,283,189], //horse
+    [283,0,189,189], //lance
+    [472,0,151,151], //shield
 ]
 let inputs = Array(INPUTLIST.length).fill(false);
 function getInput(){
@@ -136,19 +137,24 @@ function drawText(t){
 
     ctx.fillText(t.text,t.x,t.y);
 }
-function drawImg(obj){
-    const sImg = S_IMGS[obj.img]
+function drawImg(imgs,i){
+    const sImg = S_IMGS[imgs[i]]
     ctx.drawImage(ATLAS,
         sImg[0], sImg[1], sImg[2], sImg[3],
-        obj.x, obj.y ,obj.w ,obj.h
+        imgs[i+1],imgs[i+2],imgs[i+3],imgs[i+4]
     )
+    return i+5
 }
 function draw(drawData){
+    let i = 0
+    while (i<drawData.imgs.length){
+        i = drawImg(drawData.imgs,i)
+    }
     drawData.rects.forEach(i => drawFRect(i));
     drawData.sRects.forEach(i => drawSRect(i));
     drawData.circles.forEach(i => drawFCircle(i));
     drawData.texts.forEach(i => drawText(i))
-    drawData.imgs.forEach(i => drawImg(i))
+   
 }
 let game = new Game()
 function animate(timestamp) { //£ animate

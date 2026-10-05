@@ -8,19 +8,19 @@ use serde_wasm_bindgen::to_value;
 
 
 //£ Consts
-const RECROOT2: f64 = 0.7071067812; 
-const PLAYERSPEED: f64 = 500.0;
-const CANVAS_W: f64 = 1280.0;
-const CANVAS_H: f64 = 720.0;
+const RECROOT2: f32 = 0.7071067812; 
+const PLAYERSPEED: f32 = 500.0;
+const CANVAS_W: f32 = 1280.0;
+const CANVAS_H: f32 = 720.0;
 const INPUTAMO: usize = 13;
 
-const BOUND_X: f64 = 50.0;
-const BOUND_Y: f64 = 150.0;
-const BOUND_W: f64 = CANVAS_W/2.0 - BOUND_X*2.0;
-const BOUND_H: f64 = CANVAS_H - BOUND_Y - 50.0;
+const BOUND_X: f32 = 50.0;
+const BOUND_Y: f32 = 150.0;
+const BOUND_W: f32 = CANVAS_W/2.0 - BOUND_X*2.0;
+const BOUND_H: f32 = CANVAS_H - BOUND_Y - 50.0;
 const BOUND: Rect = Rect{x:BOUND_X, y: BOUND_Y, w: BOUND_W, h: BOUND_H};
 
-const BORDERTHICK: f64 = 5.0;
+const BORDERTHICK: f32 = 5.0;
 
 const TOPBOUND: Rect = Rect{
     x: 25.0,
@@ -28,15 +28,15 @@ const TOPBOUND: Rect = Rect{
     w: 1230.0,
     h: 100.0
 };
-const HORSEW: f64 = 150.0;
-const HORSEACC: f64 = 20.0;
+const HORSEW: f32 = 150.0;
+const HORSEACC: f32 = 20.0;
 
 
 
-fn getScrR(dist: f64, r: f64) -> f64{
+fn getScrR(dist: f32, r: f32) -> f32{
     (-0.048*dist + r).max(0.001)
 }
-fn pointDist(x1:f64, y1: f64, x2: f64, y2: f64) -> f64{
+fn pointDist(x1:f32, y1: f32, x2: f32, y2: f32) -> f32{
     ((x1-x2)*(x1-x2) + (y1-y2)*(y1-y2)).sqrt()
 }
 fn cirCirColi(a: Circle, b:Circle) -> bool{
@@ -57,40 +57,40 @@ enum Stages{
 #[derive(Serialize)]
 struct ImgDraw{
     img: i8,
-    x: f64,
-    y: f64,
-    w: f64,
-    h: f64,
+    x: f32,
+    y: f32,
+    w: f32,
+    h: f32,
 }
 #[derive(Serialize)]
 struct RectDraw{
-    x: f64,
-    y: f64,
-    w: f64,
-    h: f64,
+    x: f32,
+    y: f32,
+    w: f32,
+    h: f32,
     colour: u8
 }
 #[derive(Serialize)]
 struct SRectDraw{
-    x: f64,
-    y: f64,
-    w: f64,
-    h: f64,
-    thickness: f64,
+    x: f32,
+    y: f32,
+    w: f32,
+    h: f32,
+    thickness: f32,
     colour: u8
 }
 #[derive(Serialize)]
 struct CircleDraw{
-    x: f64,
-    y: f64,
-    r: f64,
+    x: f32,
+    y: f32,
+    r: f32,
     colour: u8
 }
 #[derive(Serialize)]
 struct TextDraw{
     text: String,
-    x: f64,
-    y: f64,
+    x: f32,
+    y: f32,
     h: i32,
     colour: u8,
     base: u8,
@@ -102,13 +102,13 @@ struct DrawData {
     sRects: Vec<SRectDraw>,
     circles: Vec<CircleDraw>,
     texts: Vec<TextDraw>,
-    imgs: Vec<ImgDraw>
+    imgs: Vec<f32>
 }
 fn drawFRect(drawData: &mut DrawData,rect: &Rect,colour: u8){
     drawData.rects.push(RectDraw {
         x: rect.x, y: rect.y, w: rect.w, h: rect.h, colour });
 }
-fn drawSRect(drawData: &mut DrawData, rect: &Rect, colour: u8, thickness: f64){
+fn drawSRect(drawData: &mut DrawData, rect: &Rect, colour: u8, thickness: f32){
     drawData.sRects.push(SRectDraw {
         x: rect.x, y: rect.y, w: rect.w, h: rect.h, thickness, colour })
 }
@@ -116,27 +116,35 @@ fn drawCircle(drawData: &mut DrawData, circle: &Circle, colour: u8){
     drawData.circles.push(CircleDraw {
         x: circle.x, y: circle.y, r: circle.r, colour });
 }
-fn drawText(drawData: &mut DrawData,text:String, x:f64, y:f64, h: i32, colour: u8, base: u8, align: u8 ){
+fn drawText(drawData: &mut DrawData,text:String, x:f32, y:f32, h: i32, colour: u8, base: u8, align: u8 ){
     drawData.texts.push(TextDraw { text: text, x, y: y, h: h, colour: colour, base: base, align: align});
 }
-fn drawImgRect(drawData: &mut DrawData,img:i8 , rect: &Rect){
-    drawData.imgs.push(ImgDraw { img, x: rect.x, y: rect.y, w: rect.w, h: rect.h })
+fn drawImgRect(drawData: &mut DrawData,img:f32 , rect: &Rect){
+    drawData.imgs.push(img);
+    drawData.imgs.push(rect.x);
+    drawData.imgs.push(rect.y);
+    drawData.imgs.push(rect.w);
+    drawData.imgs.push(rect.h);
 }
-fn drawImgCir(drawData: &mut DrawData, img:i8, cir: &Circle){
-    drawData.imgs.push(ImgDraw { img, x: cir.x - cir.r, y: cir.y - cir.r, w: cir.r *2.0, h: cir.r*2.0 })
+fn drawImgCir(drawData: &mut DrawData, img:f32, cir: &Circle){
+    drawData.imgs.push(img);
+    drawData.imgs.push(cir.x - cir.r);
+    drawData.imgs.push(cir.y - cir.r);
+    drawData.imgs.push(cir.r * 2.0);
+    drawData.imgs.push(cir.r * 2.0);
 }
 #[derive(Clone, Copy)]
 struct Rect{
-    x: f64,
-    y: f64,
-    w: f64,
-    h: f64
+    x: f32,
+    y: f32,
+    w: f32,
+    h: f32
 }
 #[derive(Clone, Copy)]
 struct Circle{
-    x: f64,
-    y: f64,
-    r: f64
+    x: f32,
+    y: f32,
+    r: f32
 }
 struct Player {
     left: bool,
@@ -147,7 +155,7 @@ struct Player {
     shieldSelected: bool,
     canSwap: bool,
     canAcc: bool,
-    horseSpeed: f64,
+    horseSpeed: f32,
 }
 impl Player{ //£Player
     fn new(left: bool) -> Player{
@@ -155,10 +163,10 @@ impl Player{ //£Player
         if !left{
             bounds.x += CANVAS_W/2.0
         }
-        let x: f64 = bounds.x + BOUND_W/2.0;
-        let y: f64 = bounds.y + BOUND_H/2.0;
+        let x: f32 = bounds.x + BOUND_W/2.0;
+        let y: f32 = bounds.y + BOUND_H/2.0;
 
-        let horseX: f64 = if left{TOPBOUND.x} else{TOPBOUND.x+TOPBOUND.w - HORSEW};
+        let horseX: f32 = if left{TOPBOUND.x} else{TOPBOUND.x+TOPBOUND.w - HORSEW};
         Player {
             left: left,
             shield: Circle { x, y, r: (80.0) },
@@ -171,15 +179,15 @@ impl Player{ //£Player
             horseSpeed: 0.0,
         }
     }
-    fn update(&mut self, delta: f64, inputs: &[bool; INPUTAMO]){
+    fn update(&mut self, delta: f32, inputs: &[bool; INPUTAMO]){
         let inpAdd:usize  = if self.left {
             0
         }else{
             INPUTAMO/2
         };
 
-        let mut dx: f64= 0.0;
-        let mut dy: f64 = 0.0;
+        let mut dx: f32= 0.0;
+        let mut dy: f32 = 0.0;
 
         if inputs[1+inpAdd]{
             dy -= 1.0;
@@ -212,8 +220,8 @@ impl Player{ //£Player
         }
         self.horse.x += self.horseSpeed * delta * if self.left{1.0} else{-1.0};
         if self.shieldSelected{
-            let nextX: f64 = self.shield.x + dx * PLAYERSPEED * delta;
-            let nextY: f64 = self.shield.y + dy * PLAYERSPEED * delta;
+            let nextX: f32 = self.shield.x + dx * PLAYERSPEED * delta;
+            let nextY: f32 = self.shield.y + dy * PLAYERSPEED * delta;
 
             if nextX-self.shield.r >= self.bounds.x && nextX+self.shield.r <= self.bounds.x + self.bounds.w{
                 self.shield.x = nextX;
@@ -223,8 +231,8 @@ impl Player{ //£Player
             }
             
         }else{
-            let nextX: f64 = self.lance.x + dx * PLAYERSPEED * delta;
-            let nextY: f64 = self.lance.y + dy * PLAYERSPEED * delta;
+            let nextX: f32 = self.lance.x + dx * PLAYERSPEED * delta;
+            let nextY: f32 = self.lance.y + dy * PLAYERSPEED * delta;
 
             if nextX-self.lance.r >= self.bounds.x && nextX+self.lance.r <= self.bounds.x + self.bounds.w{
                 self.lance.x = nextX;
@@ -248,11 +256,15 @@ impl Player{ //£Player
     }
     fn draw(&self, drawData: &mut DrawData){
         drawSRect(drawData, &self.bounds, 0, BORDERTHICK);
-        drawCircle(drawData, &self.shield, 2);
-        drawCircle(drawData, &self.lance, 1);
-        drawFRect(drawData, &self.horse, 1);
+
+        drawImgRect(drawData, 0.0, &self.horse);
+        drawImgCir(drawData, 1.0, &self.lance);
+        drawImgCir(drawData, 2.0, &self.shield);
+        //drawCircle(drawData, &self.shield, 2);
+        //drawCircle(drawData, &self.lance, 1);
+        //drawFRect(drawData, &self.horse, 1);
     }
-    fn drawShadow(&self, drawData: &mut DrawData, dist: f64){
+    fn drawShadow(&self, drawData: &mut DrawData, dist: f32){
         let mut flipShield = self.shield;
         let mut flipLance = self.lance;
 
@@ -272,7 +284,7 @@ pub struct Game{
     player1: Player,
     player2: Player,
     stage: Stages,
-    timeLeft: f64,
+    timeLeft: f32,
     round: u8,
     score1: i32,
     score2: i32,
@@ -297,12 +309,15 @@ impl Game{ //£Game
     }
     fn intro(&mut self,drawData: &mut DrawData, anyInp: bool){
         drawFRect(drawData, & Rect { x: CANVAS_W/2.0, y: CANVAS_H/2.0, w: 100.0, h: 100.0 }, 1);
+        if anyInp{
+            self.stage = Stages::Charge
+        }
     }
-    fn charge(&mut self,drawData: &mut DrawData, delta: f64,inputs: &[bool; INPUTAMO]){
+    fn charge(&mut self,drawData: &mut DrawData, delta: f32,inputs: &[bool; INPUTAMO]){
         self.player1.update(delta,inputs);
         self.player2.update(delta,inputs);
 
-        let horseDist: f64 = self.player2.horse.x - self.player1.horse.x - HORSEW;
+        let horseDist: f32 = self.player2.horse.x - self.player1.horse.x - HORSEW;
 
 
 
@@ -337,7 +352,7 @@ impl Game{ //£Game
 
         }
     }
-    fn hit(&mut self,drawData: &mut DrawData, delta: f64){
+    fn hit(&mut self,drawData: &mut DrawData, delta: f32){
         self.timeLeft -= delta;
         if self.timeLeft <= 0.0{
             if self.round > 3 && self.score1 != self.score2{
@@ -353,28 +368,28 @@ impl Game{ //£Game
         const TEXT_H: i32 = 50;
 
         let centerX1 = self.player1.bounds.x + self.player1.bounds.w /2.0;
-        drawText(drawData, "Player 1".to_owned(), centerX1, CANVAS_H/2.0-(TEXT_H as f64), TEXT_H, 0, 1, 1);
+        drawText(drawData, "Player 1".to_owned(), centerX1, CANVAS_H/2.0-(TEXT_H as f32), TEXT_H, 0, 1, 1);
         drawText(drawData, format!("Score: {}",self.score1), centerX1, CANVAS_H/2.0, TEXT_H, 0, 1, 1);
-        drawText(drawData, format!("Gain: {}",self.scoreGain1), centerX1, CANVAS_H/2.0+(TEXT_H as f64), TEXT_H, 0, 1, 1);
+        drawText(drawData, format!("Gain: {}",self.scoreGain1), centerX1, CANVAS_H/2.0+(TEXT_H as f32), TEXT_H, 0, 1, 1);
 
         let centerX2 = self.player2.bounds.x + self.player2.bounds.w /2.0;
-        drawText(drawData, "Player 2".to_owned(), centerX2, CANVAS_H/2.0-(TEXT_H as f64), TEXT_H, 0, 1, 1);
+        drawText(drawData, "Player 2".to_owned(), centerX2, CANVAS_H/2.0-(TEXT_H as f32), TEXT_H, 0, 1, 1);
         drawText(drawData, format!("Score: {}",self.score2), centerX2, CANVAS_H/2.0, TEXT_H, 0, 1, 1);
-        drawText(drawData, format!("Gain: {}",self.scoreGain2), centerX2, CANVAS_H/2.0+(TEXT_H as f64), TEXT_H, 0, 1, 1);
+        drawText(drawData, format!("Gain: {}",self.scoreGain2), centerX2, CANVAS_H/2.0+(TEXT_H as f32), TEXT_H, 0, 1, 1);
 
         drawText(drawData, ((self.timeLeft*10.0).round()/10.0).to_string(), CANVAS_W/2.0, CANVAS_H/2.0, 50, 0, 1, 1);
 
     }
     fn end(&mut self,drawData: &mut DrawData,anyInp: bool){
         const TEXT_H:i32 = 80;
-        drawText(drawData, format!("Player 1: {}",self.score1), CANVAS_W/2.0,CANVAS_H/2.0 -TEXT_H as f64 ,TEXT_H, 0, 1, 1);
+        drawText(drawData, format!("Player 1: {}",self.score1), CANVAS_W/2.0,CANVAS_H/2.0 -TEXT_H as f32 ,TEXT_H, 0, 1, 1);
         drawText(drawData, format!("Player 2: {}",self.score2), CANVAS_W/2.0,CANVAS_H/2.0,TEXT_H, 0, 1, 1);
 
         let wonText = if self.score1 > self.score2{"Player 1 Wins"} 
         else if self.score2 > self.score1{"Player 2 wins"}
         else {"Draw"}.to_owned();
 
-        drawText(drawData, wonText, CANVAS_W/2.0,CANVAS_H/2.0 +TEXT_H as f64 ,TEXT_H, 0, 1, 1);
+        drawText(drawData, wonText, CANVAS_W/2.0,CANVAS_H/2.0 +TEXT_H as f32 ,TEXT_H, 0, 1, 1);
 
         if anyInp{
             self.stage = Stages::Intro;
@@ -385,7 +400,7 @@ impl Game{ //£Game
             self.player2 = Player::new(false);
         }
     }
-    pub fn update(&mut self,delta: f64,inputNum: i32) -> JsValue{
+    pub fn update(&mut self,delta: f32,inputNum: i32) -> JsValue{
         let mut inputs = [false;INPUTAMO];
         for i in  0..inputs.len(){
             inputs[i] = (inputNum & (1<<i)) != 0
@@ -393,6 +408,7 @@ impl Game{ //£Game
         let mut drawData = DrawData{
             rects: vec![], sRects:vec![], circles:vec![], texts:vec![], imgs: vec![]};
         match self.stage{
+            Stages::Intro => self.intro(&mut drawData, inputs[0]),
             Stages::Charge => self.charge(&mut drawData ,delta, &inputs),
             Stages::Hit => self.hit(&mut drawData, delta),
             Stages::End => self.end(&mut drawData,inputs[0]),
