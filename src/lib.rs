@@ -54,84 +54,64 @@ enum Stages{
     End
 }
 
-#[derive(Serialize)]
-struct ImgDraw{
-    img: i8,
-    x: f32,
-    y: f32,
-    w: f32,
-    h: f32,
-}
-#[derive(Serialize)]
-struct RectDraw{
-    x: f32,
-    y: f32,
-    w: f32,
-    h: f32,
-    colour: u8
-}
-#[derive(Serialize)]
-struct SRectDraw{
-    x: f32,
-    y: f32,
-    w: f32,
-    h: f32,
-    thickness: f32,
-    colour: u8
-}
-#[derive(Serialize)]
-struct CircleDraw{
-    x: f32,
-    y: f32,
-    r: f32,
-    colour: u8
-}
-#[derive(Serialize)]
-struct TextDraw{
-    text: String,
-    x: f32,
-    y: f32,
-    h: i32,
-    colour: u8,
-    base: u8,
-    align: u8,
-}
+
 #[derive(Serialize)]
 struct DrawData {
-    rects: Vec<RectDraw>,
-    sRects: Vec<SRectDraw>,
-    circles: Vec<CircleDraw>,
-    texts: Vec<TextDraw>,
-    imgs: Vec<f32>
+    arr: Vec<f32>,
+    strings: Vec<String>
 }
 fn drawFRect(drawData: &mut DrawData,rect: &Rect,colour: u8){
-    drawData.rects.push(RectDraw {
-        x: rect.x, y: rect.y, w: rect.w, h: rect.h, colour });
+    drawData.arr.push(0.0);
+    drawData.arr.push(rect.x);
+    drawData.arr.push(rect.y);
+    drawData.arr.push(rect.w);
+    drawData.arr.push(rect.h);
+    drawData.arr.push(colour as f32);
 }
 fn drawSRect(drawData: &mut DrawData, rect: &Rect, colour: u8, thickness: f32){
-    drawData.sRects.push(SRectDraw {
-        x: rect.x, y: rect.y, w: rect.w, h: rect.h, thickness, colour })
+    drawData.arr.push(1.0);
+    drawData.arr.push(rect.x);
+    drawData.arr.push(rect.y);
+    drawData.arr.push(rect.w);
+    drawData.arr.push(rect.h);
+    drawData.arr.push(colour as f32);
+    drawData.arr.push(thickness);
 }
-fn drawCircle(drawData: &mut DrawData, circle: &Circle, colour: u8){
-    drawData.circles.push(CircleDraw {
-        x: circle.x, y: circle.y, r: circle.r, colour });
+fn drawCircle(drawData: &mut DrawData, cir: &Circle, colour: u8){
+    drawData.arr.push(2.0);
+    drawData.arr.push(cir.x);
+    drawData.arr.push(cir.y);
+    drawData.arr.push(cir.r);
+    drawData.arr.push(colour as f32);
 }
 fn drawText(drawData: &mut DrawData,text:String, x:f32, y:f32, h: i32, colour: u8, base: u8, align: u8 ){
-    drawData.texts.push(TextDraw { text: text, x, y: y, h: h, colour: colour, base: base, align: align});
+    drawData.arr.push(3.0);
+    drawData.arr.push(drawData.strings.len() as f32);
+    drawData.arr.push(x);
+    drawData.arr.push(y);
+    drawData.arr.push(h as f32);
+    drawData.arr.push(colour as f32);
+    drawData.arr.push(base as f32);
+    drawData.arr.push(align as f32);
+
+    drawData.strings.push(text);
+    
 }
 fn drawImgRect(drawData: &mut DrawData,img:f32 , rect: &Rect){
-    drawData.imgs.push(img);
-    drawData.imgs.push(rect.x);
-    drawData.imgs.push(rect.y);
-    drawData.imgs.push(rect.w);
-    drawData.imgs.push(rect.h);
+    drawData.arr.push(4.0);
+    drawData.arr.push(img);
+    drawData.arr.push(rect.x);
+    drawData.arr.push(rect.y);
+    drawData.arr.push(rect.w);
+    drawData.arr.push(rect.h);
 }
 fn drawImgCir(drawData: &mut DrawData, img:f32, cir: &Circle){
-    drawData.imgs.push(img);
-    drawData.imgs.push(cir.x - cir.r);
-    drawData.imgs.push(cir.y - cir.r);
-    drawData.imgs.push(cir.r * 2.0);
-    drawData.imgs.push(cir.r * 2.0);
+    drawData.arr.push(4.0);
+    drawData.arr.push(img);
+    drawData.arr.push(cir.x - cir.r);
+    drawData.arr.push(cir.y - cir.r);
+    drawData.arr.push(cir.r * 2.0);
+    drawData.arr.push(cir.r * 2.0);
 }
 #[derive(Clone, Copy)]
 struct Rect{
@@ -405,8 +385,7 @@ impl Game{ //£Game
         for i in  0..inputs.len(){
             inputs[i] = (inputNum & (1<<i)) != 0
         }
-        let mut drawData = DrawData{
-            rects: vec![], sRects:vec![], circles:vec![], texts:vec![], imgs: vec![]};
+        let mut drawData = DrawData{ arr: vec![], strings: vec![]};
         match self.stage{
             Stages::Intro => self.intro(&mut drawData, inputs[0]),
             Stages::Charge => self.charge(&mut drawData ,delta, &inputs),

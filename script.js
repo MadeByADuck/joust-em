@@ -96,64 +96,85 @@ function drawHud(data){
     ctx.fillText(`Score: ${data.p2Score}`,canvasWidth,canvasHeight);
 
 }
-function drawFRect(rect){
-    ctx.fillStyle = COLOURS[rect.colour];
+function drawFRect(arr,i){
+    ctx.fillStyle = COLOURS[arr[i+5]];
     ctx.fillRect(
-        rect.x,
-        rect.y,
-        rect.w,
-        rect.h
+        arr[i+1],
+        arr[i+2],
+        arr[i+3],
+        arr[i+4]
     )
+    return i+6
 }
-function drawSRect(sRect){
-    ctx.strokeStyle = COLOURS[sRect.colour];
-    ctx.lineWidth = sRect.thickness;
+function drawSRect(arr,i){
+    ctx.strokeStyle = COLOURS[arr[i+5]];
+    ctx.lineWidth = arr[i+6];
     ctx.strokeRect(
-        sRect.x,
-        sRect.y,
-        sRect.w,
-        sRect.h
+        arr[i+1],
+        arr[i+2],
+        arr[i+3],
+        arr[i+4]
     )
+    return i+7
 }
-function drawFCircle(cir){
+function drawFCircle(arr,i){
     ctx.beginPath()
     ctx.arc(
-        cir.x,
-        cir.y,
-        cir.r,
+        arr[i+1],
+        arr[i+2],
+        arr[i+3],
         0,
         2*Math.PI
     )
-    ctx.fillStyle = COLOURS[cir.colour]
+    ctx.fillStyle = COLOURS[arr[i+4]]
     ctx.fill()
+    return i+5
 }
 
-function drawText(t){
-    ctx.font = `${t.h}px Arial`;
-    ctx.fillStyle = COLOURS[t.colour];
+function drawText(arr,i,strings){
+    ctx.font = `${arr[i+4]}px Arial`;
+    ctx.fillStyle = COLOURS[arr[i+5]];
 
-    ctx.textBaseline = TEXTBASES[t.base]
-    ctx.textAlign = TEXTALIGNS[t.align]
+    ctx.textBaseline = TEXTBASES[arr[i+6]]
+    ctx.textAlign = TEXTALIGNS[arr[i+7]]
 
-    ctx.fillText(t.text,t.x,t.y);
+    ctx.fillText(strings[arr[i+1]],arr[i+2],arr[i+3]);
+    return i+8
 }
-function drawImg(imgs,i){
-    const sImg = S_IMGS[imgs[i]]
+function drawImg(arr,i){
+    const sImg = S_IMGS[arr[i+1]]
     ctx.drawImage(ATLAS,
         sImg[0], sImg[1], sImg[2], sImg[3],
-        imgs[i+1],imgs[i+2],imgs[i+3],imgs[i+4]
+        arr[i+2],arr[i+3],arr[i+4],arr[i+5]
     )
-    return i+5
+    return i+6
 }
 function draw(drawData){
     let i = 0
-    while (i<drawData.imgs.length){
-        i = drawImg(drawData.imgs,i)
+    while (i<drawData.arr.length){
+        switch (drawData.arr[i]){
+            case 0:
+                i=drawFRect(drawData.arr,i)
+                break
+            case 1:
+                i=drawSRect(drawData.arr,i)
+                break
+            case 2: 
+                i=drawFCircle(drawData.arr,i)
+                break
+            case 3:
+                i=drawText(drawData.arr,i,drawData.strings)
+                break
+            case 4:
+                i=drawImg(drawData.arr,i)
+                break
+            default:
+                console.log("Wrong i")
+
+        }
+
     }
-    drawData.rects.forEach(i => drawFRect(i));
-    drawData.sRects.forEach(i => drawSRect(i));
-    drawData.circles.forEach(i => drawFCircle(i));
-    drawData.texts.forEach(i => drawText(i))
+    
    
 }
 let game = new Game()
