@@ -1,7 +1,5 @@
 #![allow(non_snake_case)]   
 
-
-
 use serde::Serialize;
 use wasm_bindgen::prelude::*;
 use serde_wasm_bindgen::to_value;
@@ -31,7 +29,10 @@ const TOPBOUND: Rect = Rect{
 const HORSEW: f32 = 150.0;
 const HORSEACC: f32 = 20.0;
 
-
+const CP_SWITCH_T:f32 = 0.2;
+const CP_CLICK_TIME: f32 = 0.5;
+const CPSPEED: f32 = 200.0;
+const CP_REACT_T: f32 = 0.2;
 
 fn getScrR(dist: f32, r: f32) -> f32{
     (-0.048*dist + r).max(0.001)
@@ -39,13 +40,12 @@ fn getScrR(dist: f32, r: f32) -> f32{
 fn pointDist(x1:f32, y1: f32, x2: f32, y2: f32) -> f32{
     ((x1-x2)*(x1-x2) + (y1-y2)*(y1-y2)).sqrt()
 }
-fn cirCirColi(a: Circle, b:Circle) -> bool{
+fn cirCirColi(a: &Circle, b:&Circle) -> bool{
     return pointDist(a.x, a.y, b.x, b.y) <= a.r + b.r
 }
-fn cirCirEngulf(s: Circle, b: Circle) -> bool{
+fn cirCirEngulf(s: &Circle, b: &Circle) -> bool{
     return pointDist(s.x, s.y, b.x, b.y) <= b.r-s.r;
 }
-
 
 enum Stages{
     Intro,
@@ -136,6 +136,11 @@ struct Player {
     canSwap: bool,
     canAcc: bool,
     horseSpeed: f32,
+    targetX: f32,
+    targetY: f32,
+    switchTL: f32,
+    cpClickTL: f32,
+    cpReactTl: f32,
 }
 impl Player{ //£Player
     fn new(left: bool) -> Player{
@@ -157,6 +162,11 @@ impl Player{ //£Player
             canSwap:true,
             canAcc: true,
             horseSpeed: 0.0,
+            targetX: 0.0,
+            targetY: 0.0,
+            switchTL: 0.0,
+            cpClickTL: 0.0,
+            cpReactTl: 0.0,
         }
     }
     fn update(&mut self, delta: f32, inputs: &[bool; INPUTAMO]){
@@ -224,11 +234,77 @@ impl Player{ //£Player
 
         
     }
+    fn cpUpdate(&mut self, delta: f32, foe: &Player){
+        self.cpClickTL -= delta;
+        while self.cpClickTL <= 0.0 {
+            self.cpClickTL += CP_CLICK_TIME;
+            self.horseSpeed += HORSEACC;
+        }
+
+        self.horse.x += self.horseSpeed * delta * if self.left{1.0} else{-1.0};
+
+        if self.cpReactTl > 0.0{
+            self.cpReactTl -= delta;
+            return;
+        }
+
+        if self.switchTL <= 0.0{
+
+            self.shieldSelected = !self.shieldSelected;
+            if self.shieldSelected{
+
+
+                self.targetX = if CANVAS_W - foe.lance.x < self.bounds.x + self.bounds.w/2.0{
+                    self.bounds.x + self.bounds.w - self.shield.r 
+                }else{
+                    self.bounds.x + self.shield.r
+                };
+
+                self.targetY = if foe.lance.y < self.bounds.y + self.bounds.h/2.0{
+                    self.bounds.y + self.bounds.y - self.shield.r 
+                }else{
+                    self.bounds.y + self.shield.r
+                };
+                
+            }else{
+                self.targetX = CANVAS_W - foe.shield.x;
+                self.targetY = foe.shield.y;
+            }
+            self.switchTL = CP_SWITCH_T;
+            self.cpReactTl = CP_REACT_T;
+        }else{
+            self.switchTL -= delta;
+            if self.shieldSelected{
+                if pointDist(self.shield.x, self.shield.y, self.targetX, self.targetY) <= CPSPEED * 0.5 *delta{
+                    self.shield.x = self.targetX;
+                    self.shield.y = self.targetY;
+                }else{
+                    let angle = (self.targetY-self.shield.y).atan2(self.targetX-self.shield.x);
+                    self.shield.x += angle.cos() * CPSPEED * delta;
+                    self.shield.y += angle.sin() * CPSPEED * delta;
+                }
+    
+            }else{
+                if pointDist(self.lance.x, self.lance.y, self.targetX, self.targetY) <= CPSPEED * 0.5 *delta{
+                    self.lance.x = self.targetX;
+                    self.lance.y = self.targetY;
+                }else{
+                    let angle = (self.targetY-self.lance.y).atan2(self.targetX-self.lance.x);
+                    self.lance.x += angle.cos() * CPSPEED * delta;
+                    self.lance.y += angle.sin() * CPSPEED * delta;
+                }
+                
+            }
+            
+
+        }
+
+    }
     fn hit(&mut self,flipShield: Circle )-> i32{
         let mut scoreGain = 0;
-        if cirCirColi(self.lance, flipShield){
+        if cirCirColi(&self.lance, &flipShield){
             scoreGain = (self.horseSpeed /HORSEACC) as i32;
-            if cirCirEngulf(self.lance, flipShield){
+            if cirCirEngulf(&self.lance, &flipShield){
                 scoreGain *= 2
             }
         }
@@ -238,11 +314,8 @@ impl Player{ //£Player
         drawSRect(drawData, &self.bounds, 0, BORDERTHICK);
 
         drawImgRect(drawData, 0.0, &self.horse);
-        drawImgCir(drawData, 1.0, &self.lance);
         drawImgCir(drawData, 2.0, &self.shield);
-        //drawCircle(drawData, &self.shield, 2);
-        //drawCircle(drawData, &self.lance, 1);
-        //drawFRect(drawData, &self.horse, 1);
+        drawImgCir(drawData, 1.0, &self.lance);
     }
     fn drawShadow(&self, drawData: &mut DrawData, dist: f32){
         let mut flipShield = self.shield;
@@ -269,7 +342,8 @@ pub struct Game{
     score1: i32,
     score2: i32,
     scoreGain1: i32,
-    scoreGain2: i32
+    scoreGain2: i32,
+    isCp: bool
 }
 #[wasm_bindgen]
 impl Game{ //£Game
@@ -278,24 +352,31 @@ impl Game{ //£Game
         Game {
             player1: Player::new(true),
             player2: Player::new(false),
-            stage: Stages::Charge,
+            stage: Stages::Intro,
             timeLeft: 0.0,
             round: 1,
             score1: 0,
             score2: 0,
             scoreGain1: 0,
-            scoreGain2: 0
+            scoreGain2: 0,
+            isCp: false
         }
     }
-    fn intro(&mut self,drawData: &mut DrawData, anyInp: bool){
+    fn intro(&mut self,drawData: &mut DrawData, inputs: &[bool; INPUTAMO]){
         drawFRect(drawData, & Rect { x: CANVAS_W/2.0, y: CANVAS_H/2.0, w: 100.0, h: 100.0 }, 1);
-        if anyInp{
+        if inputs[6] || inputs[5]{
+            self.isCp = inputs[5];
             self.stage = Stages::Charge
         }
     }
     fn charge(&mut self,drawData: &mut DrawData, delta: f32,inputs: &[bool; INPUTAMO]){
         self.player1.update(delta,inputs);
-        self.player2.update(delta,inputs);
+        if self.isCp{
+            self.player2.cpUpdate(delta, &self.player1);
+        }else{
+            self.player2.update(delta,inputs);
+        }
+        
 
         let horseDist: f32 = self.player2.horse.x - self.player1.horse.x - HORSEW;
 
@@ -387,7 +468,7 @@ impl Game{ //£Game
         }
         let mut drawData = DrawData{ arr: vec![], strings: vec![]};
         match self.stage{
-            Stages::Intro => self.intro(&mut drawData, inputs[0]),
+            Stages::Intro => self.intro(&mut drawData, &inputs),
             Stages::Charge => self.charge(&mut drawData ,delta, &inputs),
             Stages::Hit => self.hit(&mut drawData, delta),
             Stages::End => self.end(&mut drawData,inputs[0]),
