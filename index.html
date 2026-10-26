@@ -7,7 +7,10 @@
 <body>
 
     <canvas id="canvas1" ></canvas>
-
+    <form id="form" onsubmit="return false;">
+        <label for="inp" id="label"></label>
+        <input type="number" step="any" min="0" id="inp" >
+    </form>
     
     <script type="module" src="script.js"></script>
 <style> 
@@ -17,11 +20,20 @@
         justify-content: center;
         align-items: center;
         background: black;
+        font-family: Arial;
     }
 
     #canvas1 {
         cursor: crosshair;
         background: white;
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+    }
+    #form{
+        z-index: 1;
+        line-height: 5em;
     }
 </style>
 </body>

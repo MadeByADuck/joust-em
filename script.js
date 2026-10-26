@@ -1,9 +1,14 @@
-import init, { Game } from "./pkg/rust_test.js";
+import init, { Game } from "./pkg/joust.js";
 await init();
 /** @type {HTMLCanvasElement} */
 const canvas = document.getElementById("canvas1") //£: Top
 /** @type {CanvasRenderingContext2D} */
 const ctx = canvas.getContext("2d")
+
+const inputBox = document.getElementById("inp")
+inputBox.style.display = "none"
+const label = document.getElementById("label")
+
 
 const canvasWidth = 1280;
 const canvasHeight = 720;
@@ -15,7 +20,7 @@ function resizeCanvas(){
     canvas.style.width = canvas.width + "px";
     canvas.style.height = canvas.height + "px";
     ctx.setTransform(screenScale,0,0,screenScale,0,0)
-    ctx.imageSmoothingEnabled = false //if Pixel Art
+
 }
 window.addEventListener("resize",resizeCanvas);
 resizeCanvas()
@@ -23,9 +28,7 @@ resizeCanvas()
 let previousTime = 0;
 const isKeyDown = {};
 
-let mouseX = canvasWidth / 2;
-let mouseY = canvasHeight / 2;
-let mouseDown = false;
+let promptInp = ""
 
 document.addEventListener("keydown", (event) => {
     inputs[0] = true;
@@ -39,6 +42,21 @@ document.addEventListener("keyup", (event) => {
     const index = INPUTLIST.indexOf(event.key.toLowerCase())
     if (index !== -1){
         inputs[index] = false;
+    }
+})
+document.addEventListener("submit", (e) =>{
+    e.preventDefault()
+    promptInp = inputBox.value.trim()
+
+    if (promptInp === "") promptInp = -2
+    else {
+        promptInp = +promptInp
+        if (isNaN(promptInp)) promptInp = -1
+        else {
+            inputBox.style.display = "none"
+            label.innerHTML = ""
+            inputBox.value = ""
+        }
     }
 })
 
@@ -66,10 +84,26 @@ const TEXTALIGNS = [
 const ATLAS = new Image()
 ATLAS.src = "assets/atlas.png"
 const S_IMGS = [
-    [0,0,283,189], //horse
-    [283,0,189,189], //lance
-    [472,0,151,151], //shield
+    [0,0,1280,720], //bg 0
+    [160,2161,150,100], //horseIn 1
+    [410,2161,150,99], //horseIn2 2
+    [860,2161,150,97], //horseOut 3
+    [1010,2161,150,97], //horseOut2 4
+    [560,2161,150,99], //horseStill 5
+    [710,2161,150,99], //horseStill2 6
+    [0,720,1280,720], //intro 7
+    [310,2161,100,100], //lance 8
+    [0,2161,160,160], //shield 9
+    [0,1440,1280,720], //result 10
 ]
+const AUDIOS = [
+    new Audio("assets/audio/lanceBreak.mp3"),
+    new Audio("assets/audio/horse.mp3"),
+    new Audio("assets/audio/horse.mp3"),
+    new Audio("assets/audio/fanfare.mp3")
+]
+
+
 let inputs = Array(INPUTLIST.length).fill(false);
 function getInput(){
     let inputNum = 0
@@ -80,43 +114,7 @@ function getInput(){
     }
     return inputNum
 }
-function drawHud(data){
-    if (data.stage !== 1 && data.stage !== 2 ) return
-    ctx.textBaseline = "bottom";
-    ctx.font = "50px Arial";
-    ctx.fillStyle = "black";
 
-    ctx.textAlign = "center";
-    ctx.fillText(data.round,canvasWidth/2,canvasHeight);
-
-    ctx.textAlign = "left";
-    ctx.fillText(`Score: ${data.p1Score}`,0,canvasHeight);
-
-    ctx.textAlign = "right";
-    ctx.fillText(`Score: ${data.p2Score}`,canvasWidth,canvasHeight);
-
-}
-function drawFRect(arr,i){
-    ctx.fillStyle = COLOURS[arr[i+5]];
-    ctx.fillRect(
-        arr[i+1],
-        arr[i+2],
-        arr[i+3],
-        arr[i+4]
-    )
-    return i+6
-}
-function drawSRect(arr,i){
-    ctx.strokeStyle = COLOURS[arr[i+5]];
-    ctx.lineWidth = arr[i+6];
-    ctx.strokeRect(
-        arr[i+1],
-        arr[i+2],
-        arr[i+3],
-        arr[i+4]
-    )
-    return i+7
-}
 function drawFCircle(arr,i){
     ctx.beginPath()
     ctx.arc(
@@ -130,18 +128,6 @@ function drawFCircle(arr,i){
     ctx.fill()
     return i+5
 }
- 
-
-function drawText(arr,i,strings){
-    ctx.font = `${arr[i+4]}px Arial`;
-    ctx.fillStyle = COLOURS[arr[i+5]];
-
-    ctx.textBaseline = TEXTBASES[arr[i+6]]
-    ctx.textAlign = TEXTALIGNS[arr[i+7]]
-
-    ctx.fillText(strings[arr[i+1]],arr[i+2],arr[i+3]);
-    return i+8
-}
 function drawImg(arr,i){
     const sImg = S_IMGS[arr[i+1]]
     ctx.drawImage(ATLAS,
@@ -150,30 +136,41 @@ function drawImg(arr,i){
     )
     return i+6
 }
-function draw(drawData){
+
+function drawText(arr,i,strings){
+    ctx.font = `${arr[i+4]}px Metamorphous`;
+    ctx.fillStyle = COLOURS[arr[i+5]];
+
+    ctx.textBaseline = TEXTBASES[arr[i+6]]
+    ctx.textAlign = TEXTALIGNS[arr[i+7]]
+
+    ctx.fillText(strings[arr[i+1]],arr[i+2],arr[i+3]);
+    return i+8
+}
+
+function drawPrompt(arr,i,strings){
+    inputBox.style.display = ""
+    label.innerHTML = strings[arr[i+1]]
+    return i+2
+}
+function playAudio(arr,i){
+    AUDIOS[arr[i+1]].currentTime = 0
+    AUDIOS[arr[i+1]].play()
+
+    return i+2
+}
+function stopAudio(arr,i){
+    AUDIOS[arr[i+1]].pause()
+
+    return i+2
+}
+const outputFuncs = [drawFCircle,drawImg,drawText,drawPrompt,playAudio,stopAudio]
+function draw(outputData){
     let i = 0
-    while (i<drawData.arr.length){
-        switch (drawData.arr[i]){
-            case 0:
-                i=drawFRect(drawData.arr,i)
-                break
-            case 1:
-                i=drawSRect(drawData.arr,i)
-                break
-            case 2: 
-                i=drawFCircle(drawData.arr,i)
-                break
-            case 3:
-                i=drawText(drawData.arr,i,drawData.strings)
-                break
-            case 4:
-                i=drawImg(drawData.arr,i)
-                break
-            default:
-                console.log("Wrong i")
+    while (i<outputData.arr.length){
+        const func = outputFuncs[outputData.arr[i]]
 
-        }
-
+        i = func(outputData.arr,i,outputData.strings)
     }
     
    
@@ -183,11 +180,12 @@ function animate(timestamp) { //£ animate
     const delta = (timestamp - previousTime) / 1000;
     previousTime = timestamp
     ctx.clearRect(0, 0, canvasWidth, canvasHeight);
+    
+    
+    const outputData = game.update(delta,getInput(),promptInp);
+    draw(outputData);
 
-    const drawData = game.update(delta,getInput());
-    draw(drawData);
-
-    //if (data.stage === 1)drawHud(data)
+    promptInp = -2
     requestAnimationFrame(animate);
 }
 requestAnimationFrame(animate);
